@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "WL 本機擴充功能",
+  "version": "1.0.0",
+  "description": "本機用未封裝擴充：LINE Today 留言／批次匯出、591 房屋網表格化",
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "128": "static/img/icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "128": "static/img/icons/icon-128.png"
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.591.com.tw/*",
+        "https://today.line.me/*"
+      ],
+      "js": [
+        "static/plugins/jquery-3.6.4/jquery.min.js",
+        "src/inject-config.js",
+        "src/content.js"
+      ]
+    }
+  ],
+  "host_permissions": [
+    "https://*.591.com.tw/*",
+    "https://today.line.me/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/inject/**/*",
+        "static/plugins/jquery-3.6.4/jquery.min.js"
+      ],
+      "matches": [
+        "https://*.591.com.tw/*",
+        "https://today.line.me/*"
+      ]
+    }
+  ],
+  "permissions": [
+    "storage"
+  ]
+}

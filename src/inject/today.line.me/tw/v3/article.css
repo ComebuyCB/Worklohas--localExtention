@@ -1,0 +1,59 @@
+/*=== LINE Today 文章頁留言快速載入 ===*/
+
+.wl_root {
+  --main: #06c755;
+  --gray-88: #888888;
+}
+
+.wl_toggleWrapper { position: fixed; bottom: 8px; right: 8px; z-index: 999999; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.wl_toggleWrapper[hidden] { display: none; }
+.wl_mainBtn { padding: 10px 16px; border: none; border-radius: 6px; background: var(--main); color: #fff; font-size: 14px; cursor: pointer; }
+.wl_panel { position: fixed; top: 8px; right: 8px; z-index: 999999; display: flex; flex-direction: column; overflow: hidden; width: 480px; user-select: text; max-height: calc(100vh - 40px - 3*8px); border: 1px solid #ccc; border-radius: 10px; background: #fff; color: #222; box-shadow: 0 4px 8px rgba(0, 0, 0, .15); font-size: 16px; }
+.wl_tabBtn { padding: 4px 10px; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--gray-88); font-size: 13px; cursor: pointer; }
+.wl_tabBtn.is_active { border-bottom: 2px solid var(--main); color: var(--main); font-weight: bold; }
+.wl_panel--head { display: flex; align-items: center; padding: 14px 14px 8px; margin-bottom: 6px; }
+.wl_panel--tabs { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.wl_commentCount { display: inline-flex; align-items: center; gap: 4px; }
+.wl_panel--list { overflow-y: auto; display: flex; flex-direction: column; padding: 0 14px; }
+.wl_statusBtn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 14px; border: none; color: #fff; font-size: 13px; font-weight: bold; cursor: pointer; }
+.wl_statusBtn.is_loading { background: var(--main); }
+.wl_statusBtn.is_paused { background: var(--gray-88); }
+.wl_statusBtn.is_restart { background: #555; }
+.wl_dots { display: inline-flex; gap: 3px; }
+.wl_dots > i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .3; animation: wl_dotBounce 1s infinite ease-in-out; }
+.wl_dots > i:nth-child(2) { animation-delay: .15s; }
+.wl_dots > i:nth-child(3) { animation-delay: .3s; }
+
+@keyframes wl_dotBounce {
+  0%, 80%, 100% { opacity: .3; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+.wl_comment { padding-block: 12px; padding-inline: 12px; margin-inline: -12px; border-bottom: 2px solid #eee; }
+.wl_comment--head,
+.wl_reply--head { display: flex; align-items: flex-start; gap: 8px; }
+.wl_avatar { flex: none; width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.wl_userInfo { display: flex; flex-direction: column; flex: auto; min-width: 0; gap: 4px; }
+.wl_userInfo > ._name { font-size: 14px; }
+.wl_userInfo > ._time { color: var(--gray-88); font-size: 12px; }
+.wl_commentIndex { flex: none; font-size: 14px; }
+.wl_comment--body { margin-block: 10px; line-height: 1.5; white-space: pre-wrap; }
+.wl_comment--meta { display: flex; align-items: center; gap: 10px; color: var(--gray-88); font-size: 14px; }
+.wl_comment--meta > * { min-width: 36px; }
+.wl_stat { display: flex; align-items: center; gap: 2px; }
+.wl_stat.is_zero { color: #ccc; }
+.wl_replyToggle { display: flex; align-items: center; gap: 2px; color: var(--gray-88); cursor: default; }
+.wl_replyToggle.is_clickable { color: var(--main); font-weight: bold; cursor: pointer; }
+.wl_replyToggle.is_zero { color: #ccc; }
+.wl_comment--replies { display: none; padding-left: 16px; flex-direction: column; gap: 8px; margin-top: 10px; }
+.wl_comment--replies.is_show { display: flex; }
+.wl_reply { padding: 8px 10px; border: 1px solid #e2e8e5; border-left: 2px solid var(--main); background: #fff; }
+.wl_reply--body { margin-block: 8px; line-height: 1.4; font-size: 14px; white-space: pre-wrap; }
+.wl_reply--meta { display: flex; align-items: center; gap: 4px; color: var(--gray-88); font-size: 12px; }
+
+@media (max-width: 1023.98px) {
+  .wl_toggleWrapper { bottom: 56px; }
+  .wl_panel { max-height: calc(100vh - 40px - 3*8px - 48px); }
+}
+@media (max-width: 519.98px) {
+  .wl_panel { top: 2px; left: 2px; right: 2px; width: auto; border-radius: 0; }
+}
