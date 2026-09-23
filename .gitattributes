@@ -1,0 +1,2 @@
+# bat 檔需維持 CRLF 換行，否則 cmd 可能執行異常
+*.bat text eol=crlf
