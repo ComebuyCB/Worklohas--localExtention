@@ -10,7 +10,6 @@ wlOnce('today.line.me/tw/v3/article', () => {
     popular: '/webapi/social-feed/post/listing/popular',
   };
   const API_ORIGIN = 'https://today.line.me';
-  const CARD_SELECTOR = '.postCard-container';
   const SORT_LABELS = { latest: '最新', popular: '熱門' };
   const ICON_POST = '<svg height="24" width="24" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4.9 2.867a1.9 1.9 0 0 0-1.9 1.9V17c0 1.05.85 1.9 1.9 1.9h.8v1.872a.9.9 0 0 0 1.556.615L9.59 18.9h9.51A1.9 1.9 0 0 0 21 17V4.767a1.9 1.9 0 0 0-1.9-1.9H4.9Zm-.1 1.9a.1.1 0 0 1 .1-.1h14.2a.1.1 0 0 1 .1.1V17a.1.1 0 0 1-.1.1H9.2a.9.9 0 0 0-.656.284L7.5 18.497V18a.9.9 0 0 0-.9-.9H4.9a.1.1 0 0 1-.1-.1V4.767Z M8.248 7.9h2.861l.093.091v3.835c0 1.278-1.108 2.374-2.4 2.374H8.34v-1.187h.37c.553 0 .922-.457.922-1.004v-.64H7.786c-.092 0-.184 0-.184-.09v-2.74c0-.365.276-.64.646-.64Zm8.062 0h-2.862a.628.628 0 0 0-.646.639v2.74c0 .09.092.09.184.09h1.846v.64c0 .547-.369 1.004-.923 1.004h-.369V14.2h.462c1.292 0 2.4-1.096 2.4-2.374V7.991l-.093-.091Z" fill="currentColor"></path></svg>';
   const ICON_LIKE = '<svg height="18" width="18" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M8 9.74998C8 9.11483 8.51486 8.59998 9.15 8.59998C9.78503 8.59998 10.3 9.11482 10.3 9.74998C10.3 10.3851 9.78503 10.9 9.15 10.9C8.51486 10.9 8 10.3851 8 9.74998Z" fill="currentColor"></path><path d="M8.59423 13.0058C8.97151 12.7884 9.45439 12.9166 9.67277 13.2921C10.1502 14.1132 11.0297 14.6287 12.0002 14.6287C12.9707 14.6287 13.8501 14.1132 14.3276 13.2921C14.546 12.9166 15.0289 12.7884 15.4062 13.0058C15.7834 13.2231 15.9123 13.7037 15.6939 14.0793C14.9371 15.3806 13.5399 16.2 12.0002 16.2C10.4604 16.2 9.06333 15.3806 8.30651 14.0793C8.08813 13.7037 8.21695 13.2231 8.59423 13.0058Z" fill="currentColor"></path><path d="M13.7002 9.74998C13.7002 9.11483 14.2151 8.59998 14.8502 8.59998C15.4852 8.59998 16.0002 9.11482 16.0002 9.74998C16.0002 10.3851 15.4852 10.9 14.8502 10.9C14.2151 10.9 13.7002 10.3851 13.7002 9.74998Z" fill="currentColor"></path><path d="M22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12ZM12 3.8C7.47126 3.8 3.8 7.47126 3.8 12C3.8 16.5287 7.47126 20.2 12 20.2C16.5287 20.2 20.2 16.5287 20.2 12C20.2 7.47126 16.5287 3.8 12 3.8Z" fill="currentColor" fill-rule="evenodd"></path></svg>';
@@ -30,30 +29,11 @@ wlOnce('today.line.me/tw/v3/article', () => {
   let totalCount = 0;
   let currentSort = 'latest';
   let loadSession = 0;
-  let listEl, countEl, pauseBtn, mainBtn, tabLatestBtn, tabPopularBtn, wrapperEl;
+  let isCollapsed = false;  // 面板收合狀態，換文章重建面板時沿用
+  let panelEl, listEl, countEl, pauseBtn, collapseBtn, tabLatestBtn, tabPopularBtn;
 
   function sleep(ms) {
     return new Promise((r) => setTimeout(r, ms));
-  }
-
-  const relativeTimeFormatter = new Intl.RelativeTimeFormat('zh-TW', { numeric: 'auto' });
-  const RELATIVE_TIME_DIVISIONS = [
-    { amount: 60, unit: 'second' },
-    { amount: 60, unit: 'minute' },
-    { amount: 24, unit: 'hour' },
-    { amount: 30, unit: 'day' },
-    { amount: 12, unit: 'month' },
-    { amount: Infinity, unit: 'year' },
-  ];
-
-  function formatRelativeTime(unixMs) {
-    let duration = (unixMs - Date.now()) / 1000;
-    for (const division of RELATIVE_TIME_DIVISIONS) {
-      if (Math.abs(duration) < division.amount) {
-        return relativeTimeFormatter.format(Math.round(duration), division.unit);
-      }
-      duration /= division.amount;
-    }
   }
 
   function renderCountLabel(loaded, total) {
@@ -67,7 +47,7 @@ wlOnce('today.line.me/tw/v3/article', () => {
       <img class="wl_avatar" src="${avatarUrl}" alt="">
       <div class="wl_userInfo">
         <span class="_name">${author?.name ?? '匿名'}</span>
-        <span class="_time">${formatRelativeTime(timeMs)}</span>
+        <span class="_time">${wlRelativeTime(timeMs)}</span>
       </div>
     `;
   }
@@ -163,12 +143,20 @@ wlOnce('today.line.me/tw/v3/article', () => {
     repliesEl?.classList.toggle('is_show');
   }
 
+  // 收合時只保留標題列，tabs / 留言列表 / 狀態鈕 由 CSS 隱藏
+  function updateCollapseUI() {
+    panelEl.classList.toggle('is_collapsed', isCollapsed);
+    collapseBtn.textContent = isCollapsed ? '展開' : '收合';
+    collapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
+  }
+
   function createPanel() {
     document.getElementById('__lineToday_commentPanel')?.remove();
 
     const panel = document.createElement('div');
     panel.id = '__lineToday_commentPanel';
-    panel.className = 'wl_root wl_panel';
+    panel.className = 'wl_panel';
+    panelEl = panel;
 
     const header = document.createElement('div');
     header.className = 'wl_panel--head';
@@ -176,6 +164,16 @@ wlOnce('today.line.me/tw/v3/article', () => {
     countEl.className = 'wl_commentCount';
     countEl.innerHTML = renderCountLabel(0, 0);
     header.appendChild(countEl);
+
+    collapseBtn = document.createElement('button');
+    collapseBtn.className = 'wl_panelToggle';
+    collapseBtn.type = 'button';
+    collapseBtn.addEventListener('click', () => {
+      isCollapsed = !isCollapsed;
+      updateCollapseUI();
+    });
+    header.appendChild(collapseBtn);
+    panel.appendChild(header);
 
     const tabsRow = document.createElement('div');
     tabsRow.className = 'wl_panel--tabs';
@@ -195,10 +193,8 @@ wlOnce('today.line.me/tw/v3/article', () => {
     });
     tabsRow.appendChild(tabLatestBtn);
     tabsRow.appendChild(tabPopularBtn);
-    header.appendChild(tabsRow);
+    panel.appendChild(tabsRow);
     updateTabsUI();
-
-    panel.appendChild(header);
 
     listEl = document.createElement('div');
     listEl.className = 'wl_panel--list';
@@ -216,6 +212,7 @@ wlOnce('today.line.me/tw/v3/article', () => {
     });
     panel.appendChild(pauseBtn);
 
+    updateCollapseUI();
     document.body.appendChild(panel);
   }
 
@@ -354,28 +351,17 @@ wlOnce('today.line.me/tw/v3/article', () => {
     runLoop(mySession, sort);
   }
 
-  async function openPanel() {
+  // 進入文章頁時自動呼叫，偵測失敗只記 log，不跳 prompt 打斷閱讀
+  function openPanel() {
     params = null;
     if (!tryCaptureParamsFromDom() && !tryCaptureParamsFromNetwork()) {
-      const manual = prompt('自動偵測失敗，請貼上該篇文章留言 API 的完整網址：');
-      if (!manual) return false;
-      try {
-        const u = new URL(manual);
-        params = {
-          quoteContentId: u.searchParams.get('quoteContentId'),
-          quoteContentType: u.searchParams.get('quoteContentType'),
-          country: u.searchParams.get('country') || 'tw',
-        };
-      } catch (e) {
-        alert('網址格式不正確');
-        return false;
-      }
+      wlLog('❌ 無法偵測文章留言參數');
+      return;
     }
 
     panelOpen = true;
     createPanel();
     startLoad('popular');
-    return true;
   }
 
   function closePanel() {
@@ -383,70 +369,35 @@ wlOnce('today.line.me/tw/v3/article', () => {
     document.getElementById('__lineToday_commentPanel')?.remove();
   }
 
-  function detectOnce() {
-    if (!tryCaptureParamsFromDom() && document.querySelector(CARD_SELECTOR)) {
-      tryCaptureParamsFromNetwork();
-    }
-  }
-
   // 唯一的顯示/隱藏判斷入口：不管網址怎麼變，只看 DOM 上有沒有文章錨點。
   // today.line.me 是 SPA，網址不一定會跟著「是否正在看文章」同步變化，
   // 所以每次 DOM 有變動就重新檢查一次，比依賴 content.js 的網址比對可靠。
   //
   // 重要：這個函式是被觀察 document.body 的 MutationObserver 呼叫的，
-  // 內部絕對不能在「狀態沒變」的情況下還去動 DOM（例如重寫 mainBtn.textContent）——
+  // 內部絕對不能在「狀態沒變」的情況下還去動 DOM（例如重建面板）——
   // 那種寫法會被自己觸發的 mutation 再次叫回這裡，形成無限迴圈把分頁卡死。
-  // 所以「離開文章 / 切換到別篇文章」的重置動作都只在真的發生轉變的那一刻做一次。
+  // 所以「離開文章 / 切換到別篇文章」的開關動作都只在真的發生轉變的那一刻做一次。
   function updateVisibility() {
     const anchor = findArticleAnchor();
-    if (wrapperEl && wrapperEl.hidden !== !anchor) wrapperEl.hidden = !anchor;
 
     if (!anchor) {
       if (currentAnchorId !== null) {
         currentAnchorId = null;
         if (panelOpen) closePanel();
-        if (mainBtn) mainBtn.textContent = '開始閱讀留言';
         params = null;
       }
       return;
     }
 
+    // 進入文章或切換到別篇文章：重建面板並預設打開
     if (anchor.id !== currentAnchorId) {
       currentAnchorId = anchor.id;
       if (panelOpen) closePanel();
-      if (mainBtn) mainBtn.textContent = '開始閱讀留言';
-      params = null;
+      openPanel();
     }
-
-    if (!params) detectOnce();
   }
 
   function setupUI() {
-    document.getElementById('__lineToday_toggleWrapper')?.remove();
-
-    wrapperEl = document.createElement('div');
-    wrapperEl.id = '__lineToday_toggleWrapper';
-    wrapperEl.className = 'wl_root wl_toggleWrapper';
-
-    mainBtn = document.createElement('button');
-    mainBtn.className = 'wl_mainBtn';
-    mainBtn.textContent = '開始閱讀留言';
-
-    mainBtn.addEventListener('click', async () => {
-      if (panelOpen) {
-        closePanel();
-        mainBtn.textContent = '開始閱讀留言';
-        return;
-      }
-      mainBtn.disabled = true;
-      const ok = await openPanel();
-      mainBtn.disabled = false;
-      if (ok) mainBtn.textContent = '關閉留言視窗';
-    });
-
-    wrapperEl.appendChild(mainBtn);
-    document.body.appendChild(wrapperEl);
-
     // 加個小 debounce：SPA 換頁瞬間常常一次炸出大量 DOM mutation，
     // 沒有 debounce 的話 updateVisibility 會被密集連續呼叫，浪費效能
     let visibilityCheckTimer = null;

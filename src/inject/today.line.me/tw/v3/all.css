@@ -1,0 +1,245 @@
+/*=== LINE Today 共用樣式（article.js 留言快速載入 + index.js 批次讀取與匯出）===*/
+
+/*
+ * 檔案結構
+ * 1. 共用變數：顏色 token，亮色為預設，暗色跟著系統 prefers-color-scheme 切換
+ * 2. 共用元件：留言底部狀態鈕 .wl_statusBtn（兩支 JS 都會產生）
+ * 2-1. 共用元件：留言列表與回覆 .wl_comment / .wl_reply（兩支 JS 都會產生）
+ * 2-2. 共用元件：固定浮動視窗外框、標題列、收合按鈕與收合寬度（.wl_panel / .wl_batch）
+ * 3. article.js：右側留言面板（含收合按鈕）
+ * 4. index.js：左側批次面板、文章 modal
+ * 5. RWD：依 max-width 由大到小排列，每條規則註明所屬區塊
+ */
+
+
+/*=== 1. 共用變數（亮 / 暗主題）===*/
+
+/* 變數一律加 --wl_ 前綴，掛在 :root 也不會與 LINE Today 原本的變數衝突 */
+
+/* 亮色（預設） */
+:root {
+  --wl_main: #06c755;
+  --wl_bg: #ffffff;           /* 面板、卡片底色 */
+  --wl_bg-soft: #f6f6f6;      /* 輸入框、設定區、表頭等次要底色 */
+  --wl_bg-page: #f2f2f2;      /* modal 外層底色 */
+  --wl_text: #222222;         /* 主要文字 */
+  --wl_text-sub: #555555;     /* 標籤、次要文字 */
+  --wl_text-muted: #888888;   /* 提示、時間、未啟用 tab */
+  --wl_text-zero: #cccccc;    /* 讚數 / 回覆數為 0 */
+  --wl_border: #dddddd;       /* 外框、按鈕框線 */
+  --wl_divider: #eeeeee;      /* 分隔線 */
+  --wl_link: #1a73e8;
+  --wl_error: #d93025;
+  --wl_shadow: 0 4px 8px rgba(0, 0, 0, .15);  /* 浮動視窗陰影 */
+  --wl_btn-bg: #eef0f2;       /* 一般按鈕底色（收合、輸出等） */
+  --wl_btn-bg-hover: #e2e5e9; /* 一般按鈕 hover 底色 */
+}
+
+/* 暗色：跟著系統主題切換 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --wl_bg: #1f2023;
+    --wl_bg-soft: #2a2c30;
+    --wl_bg-page: #141517;
+    --wl_text: #e8e8e8;
+    --wl_text-sub: #b8b8b8;
+    --wl_text-muted: #8f8f8f;
+    --wl_text-zero: #555555;
+    --wl_border: #56595f;
+    --wl_divider: #3d4046;
+    --wl_link: #8ab4f8;
+    --wl_error: #f28b82;
+    --wl_shadow: 0 6px 16px rgba(0, 0, 0, .6), 0 0 0 1px rgba(255, 255, 255, .04);
+    --wl_btn-bg: #555555;        /* 同 .wl_statusBtn.is_restart */
+    --wl_btn-bg-hover: #616161;
+  }
+}
+
+
+/*=== 2. 共用元件：留言狀態鈕（讀取中 / 暫停 / 重新開始）===*/
+
+.wl_statusBtn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 14px; border: none; color: #fff; font-size: 13px; font-weight: bold; cursor: pointer; }
+.wl_statusBtn[hidden] { display: none; }
+.wl_statusBtn.is_loading { background: var(--wl_main); }
+.wl_statusBtn.is_paused { background: var(--wl_text-muted); }
+.wl_statusBtn.is_restart { background: #555; }
+.wl_dots { display: inline-flex; gap: 3px; }
+.wl_dots > i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .3; animation: wl_dotBounce 1s infinite ease-in-out; }
+.wl_dots > i:nth-child(2) { animation-delay: .15s; }
+.wl_dots > i:nth-child(3) { animation-delay: .3s; }
+
+@keyframes wl_dotBounce {
+  0%, 80%, 100% { opacity: .3; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+
+
+/*=== 2-1. 共用元件：留言列表與回覆（article.js 面板 .wl_panel--list、index.js modal .wl_batchPosts）===*/
+
+.wl_panel--list,
+.wl_batchPosts { overflow-y: auto; display: flex; flex-direction: column; padding: 0 14px; }
+.wl_comment { padding-block: 12px; padding-inline: 12px; margin-inline: -12px; border-bottom: 2px solid var(--wl_divider); }
+.wl_comment--head,
+.wl_reply--head { display: flex; align-items: flex-start; gap: 8px; }
+.wl_avatar { flex: none; width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.wl_userInfo { display: flex; flex-direction: column; flex: auto; min-width: 0; gap: 4px; }
+.wl_userInfo > ._name { font-size: 14px; }
+.wl_userInfo > ._time { color: var(--wl_text-muted); font-size: 12px; }
+.wl_commentIndex { flex: none; font-size: 14px; }
+.wl_comment--body { margin-block: 10px; line-height: 1.5; white-space: pre-wrap; }
+.wl_comment--meta { display: flex; align-items: center; gap: 10px; color: var(--wl_text-muted); font-size: 14px; }
+.wl_comment--meta > * { min-width: 36px; }
+.wl_stat { display: flex; align-items: center; gap: 2px; }
+.wl_stat.is_zero { color: var(--wl_text-zero); }
+/* article.js 為 span、index.js 為 button，一併清除 button 預設樣式 */
+.wl_replyToggle { display: flex; align-items: center; gap: 2px; padding: 0; border: none; background: none; color: var(--wl_text-muted); font-size: inherit; cursor: default; }
+.wl_replyToggle.is_clickable { color: var(--wl_main); font-weight: bold; cursor: pointer; }
+.wl_replyToggle.is_zero { color: var(--wl_text-zero); }
+.wl_comment--replies { display: none; padding-left: 16px; flex-direction: column; gap: 8px; margin-top: 10px; }
+.wl_comment--replies.is_show { display: flex; }
+.wl_reply { padding: 8px 10px; border: 1px solid var(--wl_border); border-left: 2px solid var(--wl_main); background: var(--wl_bg); }
+.wl_reply--body { margin-block: 8px; line-height: 1.4; font-size: 14px; white-space: pre-wrap; }
+.wl_reply--meta { display: flex; align-items: center; gap: 4px; color: var(--wl_text-muted); font-size: 12px; }
+
+
+/*=== 2-2. 共用元件：固定浮動視窗（article.js 右側 .wl_panel、index.js 左側 .wl_batch）===*/
+
+/* 外框；color-scheme 只加在自己的元件上，讓原生控制項跟著系統深淺色，不影響原網頁 */
+.wl_panel,
+.wl_batch { color-scheme: light dark; position: fixed; top: 8px; display: flex; flex-direction: column; overflow: hidden; max-height: calc(100vh - 16px); border: 1px solid var(--wl_border); border-radius: 10px; background: var(--wl_bg); color: var(--wl_text); box-shadow: var(--wl_shadow); user-select: text; }
+
+/* 標題列：標題（含 svg icon）＋ 收合按鈕 */
+.wl_panel--head,
+.wl_batch--head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 14px 8px; }
+.wl_commentCount,
+.wl_batchTitle { overflow: hidden; display: inline-flex; align-items: center; gap: 4px; min-width: 0; font-size: 16px; white-space: nowrap; }
+.wl_commentCount > svg,
+.wl_batchTitle > svg { flex-shrink: 0; }
+.wl_panelToggle { flex: none; padding: 4px 10px; border: 1px solid var(--wl_border); border-radius: 6px; background: var(--wl_btn-bg); color: var(--wl_text); font-size: 13px; font-weight: 700; cursor: pointer; transition: background-color .15s ease; }
+.wl_panelToggle:hover { background: var(--wl_btn-bg-hover); }
+
+/* 收合：只保留標題列，寬度縮為 220px */
+.wl_panel.is_collapsed,
+.wl_batch.is_collapsed { width: 220px; }
+.wl_panel.is_collapsed > .wl_panel--head,
+.wl_batch.is_collapsed > .wl_batch--head { padding-bottom: 14px; }
+
+
+/*=== 3. article.js：文章頁留言快速載入 ===*/
+
+/* 右側留言面板：進入文章頁預設打開；外框與標題列見第 2-2 區 */
+.wl_panel { right: 8px; z-index: 999999; width: 480px; font-size: 16px; }
+.wl_panel--tabs { display: flex; align-items: center; gap: 4px; padding: 0 14px; margin-bottom: 6px; }
+.wl_tabBtn { padding: 4px 10px; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--wl_text-muted); font-size: 13px; cursor: pointer; }
+.wl_tabBtn.is_active { border-bottom: 2px solid var(--wl_main); color: var(--wl_main); font-weight: bold; }
+
+/* 面板收合：隱藏 tabs / 留言列表 / 狀態鈕 */
+.wl_panel.is_collapsed > .wl_panel--tabs,
+.wl_panel.is_collapsed > .wl_panel--list,
+.wl_panel.is_collapsed > .wl_statusBtn { display: none; }
+
+
+/*=== 4. index.js：批次讀取文章、留言與匯出 ===*/
+
+/* 左側批次面板：外框與標題列見第 2-2 區 */
+.wl_batch { left: 8px; z-index: 999998; width: 420px; font-size: 14px; }
+.wl_batch--body { overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 6px 14px 14px; }
+.wl_batch.is_collapsed > .wl_batch--body { display: none; }
+
+/* 面板：輸入表單 */
+.wl_batchForm { display: flex; flex-direction: column; gap: 8px; }
+.wl_batchFormBar { display: flex; align-items: center; gap: 8px; }
+.wl_batchLabel { color: var(--wl_text-sub); font-size: 13px; font-weight: 600; }
+/* 加入此頁文章：靠右的小按鈕，僅文章頁顯示 */
+.wl_batchAddPage { flex: none; margin-left: auto; padding: 4px 10px; font-size: 12px; }
+.wl_batchAddPage[hidden] { display: none; }
+.wl_batchInput { box-sizing: border-box; width: 100%; min-height: 180px; padding: 10px 12px; border: 1px solid var(--wl_border); border-radius: 8px; outline: none; background: var(--wl_bg-soft); color: var(--wl_text); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.7; resize: vertical; transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease; }
+.wl_batchInput::placeholder { color: var(--wl_text-muted); }
+.wl_batchInput:focus { border-color: var(--wl_main); background: var(--wl_bg); box-shadow: 0 0 0 3px rgba(6, 199, 85, .15); }
+
+/* 面板：查詢結果 table 與匯出按鈕 */
+.wl_batchResult { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--wl_divider); }
+.wl_batchResult[hidden] { display: none; }
+.wl_batchTable { overflow: hidden; width: 100%; border: 1px solid var(--wl_border); border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; }
+.wl_batchTable > thead > tr > th,
+.wl_batchTable > tbody > tr > td { padding: 8px 10px; border-bottom: 1px solid var(--wl_divider); text-align: left; vertical-align: middle; word-break: break-all; }
+.wl_batchTable > thead > tr > th + th,
+.wl_batchTable > tbody > tr > td + td { border-left: 1px solid var(--wl_divider); }
+.wl_batchTable > thead > tr > th { background: var(--wl_bg-soft); color: var(--wl_text-sub); font-weight: 600; }
+.wl_batchTable > thead > tr > th:first-child { width: 40%; }
+.wl_batchTable > tbody > tr:last-child > td { border-bottom: none; }
+.wl_batchTable > tbody > tr:hover > td { background: var(--wl_bg-soft); }
+.wl_batchTable a { color: var(--wl_link); }
+.wl_batchActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* 面板：匯出留言數 / 回覆數 range */
+.wl_batchSettings { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--wl_bg-soft); }
+.wl_batchRange { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.wl_batchRange > ._label { flex: none; display: flex; align-items: center; gap: 6px; width: 104px; color: var(--wl_text-sub); cursor: pointer; }
+.wl_batchRange > ._label > input { margin: 0; accent-color: var(--wl_main); cursor: pointer; }
+.wl_batchRange > ._label:has(> input:disabled) { opacity: .45; cursor: not-allowed; }
+.wl_batchRange > input { flex: auto; min-width: 0; accent-color: var(--wl_main); }
+/* range 停用時連同數值一起淡化 */
+.wl_batchRange > input:disabled,
+.wl_batchRange > input:disabled + ._value { opacity: .45; }
+.wl_batchRange > ._value { flex: none; width: 24px; font-weight: 700; text-align: right; }
+
+/* 面板：按鈕與提示文字（modal 共用） */
+.wl_batchBtn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--wl_border); border-radius: 8px; background: var(--wl_btn-bg); color: var(--wl_text); font-size: 13px; font-weight: 700; cursor: pointer; transition: background-color .15s ease, filter .15s ease; }
+.wl_batchBtn:hover:not(:disabled) { background: var(--wl_btn-bg-hover); }
+.wl_batchBtn.is_primary { border-color: var(--wl_main); background: var(--wl_main); color: #fff; }
+.wl_batchBtn.is_primary:hover:not(:disabled) { background: var(--wl_main); filter: brightness(.94); }
+.wl_batchBtn:disabled { opacity: .5; cursor: not-allowed; }
+.wl_batchBtn > svg { flex-shrink: 0; }
+/* 查詢鈕：以 .wl_batchBtn.is_primary 為基底，加厚並放上 icon */
+.wl_batchSubmit { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; font-size: 14px; font-weight: 700; }
+.wl_batchLink { padding: 0; border: none; background: none; color: var(--wl_link); font-size: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
+.wl_batchHint { margin: 0; color: var(--wl_text-muted); font-size: 13px; }
+.wl_batchHint.is_error { color: var(--wl_error); }
+
+/* Modal：外框 */
+.wl_batchModal { color-scheme: light dark; box-sizing: border-box; width: min(1200px, calc(100vw - 32px)); height: calc(100vh - 32px); max-height: 100vh; overflow: hidden; max-width: none; max-height: none; padding: 0; margin: auto; border: none; border-radius: 10px; background: var(--wl_bg-page); color: var(--wl_text); font-size: 15px; }
+.wl_batchModal[open] { display: flex; flex-direction: column; }
+.wl_batchModal::backdrop { background: rgba(0, 0, 0, .5); }
+.wl_batchModal--head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: var(--wl_bg); border-bottom: 1px solid var(--wl_divider); }
+.wl_batchModal--body { flex: auto; display: grid; grid-template-columns: 2fr 1fr; gap: 12px; min-height: 0; padding: 12px; }
+.wl_batchModalTitle { margin: 0; font-size: 18px; }
+.wl_batchModalTitle > a { color: var(--wl_link); }
+.wl_batchModalTitle > a:hover { text-decoration: underline; }
+
+
+/* Modal：左欄文章內文 */
+.wl_batchArticle { overflow-y: auto; padding: 16px; background: var(--wl_bg); border-radius: 6px; word-break: break-word; }
+.wl_batchArticle h1 { margin-bottom: 16px; font-size: 24px; font-weight: 700; }
+.wl_batchArticle h4.publisher { margin-bottom: 8px; font-size: 16px; }
+.wl_batchArticle .publish-info-text { margin-bottom: 8px; color: var(--wl_text-sub); font-size: 14px; }
+.wl_batchArticle article { margin-top: 16px; line-height: 1.7; }
+.wl_batchArticle figure { display: none; }
+
+/* Modal：右欄留言列表 + 底部狀態鈕；列表與留言樣式見第 2-1 區，狀態鈕見第 2 區 */
+.wl_batchPostPanel { overflow: hidden; display: flex; flex-direction: column; min-height: 0; background: var(--wl_bg); border-radius: 6px; font-size: 16px; word-break: break-word; }
+.wl_batchPostPanel > .wl_batchPosts { flex: auto; min-height: 0; }
+.wl_batchPosts > .wl_batchHint { padding-block: 12px; }
+
+
+/*=== 5. RWD ===*/
+
+/* article.js：避開 LINE Today 手機版底部導覽列 */
+@media (max-width: 1023.98px) {
+  .wl_panel { max-height: calc(100vh - 16px - 48px); }
+}
+
+/* index.js：modal 改單欄，整個 body 一起捲動 */
+@media (max-width: 991.98px) {
+  .wl_batchModal--body { grid-template-columns: 1fr; overflow-y: auto; }
+  .wl_batchArticle,
+  .wl_batchPosts { overflow-y: visible; }
+}
+
+/* article.js + index.js：小螢幕面板滿版；收合時維持 220px 並貼齊原本那一側 */
+@media (max-width: 519.98px) {
+  .wl_panel,
+  .wl_batch { top: 2px; left: 2px; right: 2px; width: auto; border-radius: 0; }
+  .wl_panel.is_collapsed { left: auto; }
+  .wl_batch.is_collapsed { right: auto; }
+}

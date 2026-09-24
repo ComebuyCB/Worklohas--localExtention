@@ -23,3 +23,24 @@ function wlMessage(handlers) {
     }
   })
 }
+
+// 將時間戳（ms）轉為相對時間，例如「3 分鐘前」「昨天」
+const wlRelativeTimeFormatter = new Intl.RelativeTimeFormat('zh-TW', { numeric: 'auto' })
+const WL_RELATIVE_TIME_DIVISIONS = [
+  { amount: 60, unit: 'second' },
+  { amount: 60, unit: 'minute' },
+  { amount: 24, unit: 'hour' },
+  { amount: 30, unit: 'day' },
+  { amount: 12, unit: 'month' },
+  { amount: Infinity, unit: 'year' },
+]
+
+function wlRelativeTime(unixMs) {
+  let duration = (unixMs - Date.now()) / 1000
+  for (const division of WL_RELATIVE_TIME_DIVISIONS) {
+    if (Math.abs(duration) < division.amount) {
+      return wlRelativeTimeFormatter.format(Math.round(duration), division.unit)
+    }
+    duration /= division.amount
+  }
+}

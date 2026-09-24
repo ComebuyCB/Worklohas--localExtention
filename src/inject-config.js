@@ -30,7 +30,7 @@ const inject_sites = {
   "line-today": {
     "info": {
       "title": "LINE Today 留言快速載入",
-      "description": "文章頁留言快速載入，繞過原生每次 5 則的捲動限制，並可切換 最新/熱門；左側面板可批次讀取文章、留言並匯出 JSON / Word",
+      "description": "文章頁留言快速載入，繞過原生每次 5 則的捲動限制，並可切換 最新/熱門；左側面板可批次讀取文章、留言並匯出 JSON / Markdown",
       "group": "",
       "quickLink": "https://today.line.me/tw/v3/tab"
     },
@@ -40,7 +40,7 @@ const inject_sites = {
         "url": "today.line.me",
         "features": ["spa"],
         "inject": {
-          "css": ["src/inject/today.line.me/tw/v3/article.css", "src/inject/today.line.me/tw/v3/index.css"],
+          "css": ["src/inject/today.line.me/tw/v3/all.css"],
           "js": ["src/inject/today.line.me/tw/v3/article.js", "src/inject/today.line.me/tw/v3/index.js"]
         }
       }
