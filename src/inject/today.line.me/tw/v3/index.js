@@ -139,6 +139,19 @@ wlOnce('today.line.me/tw/v3/index', () => {
       });
 
       this.modal.addEventListener('close', () => this._cancelPosts());
+
+      // 事件委派：table 與 modal 標題的文章連結改為 SPA 換頁；Ctrl / Cmd / Shift / 中鍵 維持瀏覽器預設（開新分頁等）
+      [this.panel, this.modal].forEach((el) => {
+        el.addEventListener('click', (e) => {
+          const link = e.target.closest('.js-batch-spa-link');
+          if (!link || link.hostname !== location.hostname || !window.next?.router) return;
+          if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+
+          e.preventDefault();
+          if (this.modal.open) this.modal.close();
+          this.navigate(link.href);
+        });
+      });
     }
 
     // public
@@ -149,6 +162,19 @@ wlOnce('today.line.me/tw/v3/index', () => {
       this.articles = this._parseArticleIds(text).map((articleId) => this._createArticle(articleId));
       this._renderTable();
       this._loadArticles(this.articles, this.searchController.signal);
+    }
+
+    // SPA 換頁不重新整理：LINE Today 為 Next.js（Pages Router），直接使用網站的 next.router
+    // 找不到 router 時退回一般整頁跳轉
+    navigate(url) {
+      const { pathname, search, hash } = new URL(url, location.href);
+      const path = `${pathname}${search}${hash}`;
+
+      if (!window.next?.router) {
+        location.href = path;
+        return;
+      }
+      window.next.router.push(path).catch((err) => wlLog('❌ SPA 換頁失敗', err));
     }
 
     // 把目前所在文章頁的網址接到 textarea 最後面，已存在則略過
@@ -175,7 +201,7 @@ wlOnce('today.line.me/tw/v3/index', () => {
       this.modalArticleId = articleId;
       this.isPostsPaused = false;
 
-      this.modalTitle.innerHTML = `<a href="${this._escapeHTML(article.url)}">${this._escapeHTML(article.title)}</a>`;
+      this.modalTitle.innerHTML = `<a class="js-batch-spa-link" href="${this._escapeHTML(article.url)}">${this._escapeHTML(article.title)}</a>`;
       this.modalArticle.innerHTML = article.articleHTML;
       this.modalPosts.innerHTML = '<p class="wl_batchHint">留言讀取中...</p>';
       if (!this.modal.open) this.modal.showModal();
@@ -617,7 +643,7 @@ wlOnce('today.line.me/tw/v3/index', () => {
       this.articles.forEach((article) => {
         article.row = document.createElement('tr');
         article.row.innerHTML = `
-          <td><a href="${this._escapeHTML(article.url)}">${this._escapeHTML(article.url)}</a></td>
+          <td><a class="js-batch-spa-link" href="${this._escapeHTML(article.url)}">${this._escapeHTML(article.url)}</a></td>
           <td class="js-batch-title">${this._titleMarkup(article)}</td>
         `;
         this.table.appendChild(article.row);
